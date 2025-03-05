@@ -1,13 +1,14 @@
 #!/usr/bin/python3
 
-from flask import Flask, render_template, request, send_file
+import cgi
+import cgitb
+import os
 from Bio import SeqIO
 from Bio.Seq import Seq 
 from Bio.SeqRecord import SeqRecord
 import re
-import os
 
-app = Flask(__name__)
+cgitb.enable()
 
 
 #Function to ensure that the DNA is a multiple of 3
@@ -40,63 +41,68 @@ def trim_sequence(protein_seq, start_pattern, stop_pattern):
             return protein_seq[start_index:stop_index]
     return None
 
-@app.route("/", methods = ["GET", "POST"])
-def index():
-    if request.method == "POST":
-        #Get user inputs
-        start_seq = request.form["start_seq"]
-        stop_seq = request.form["stop_seq"]
-        min_count = int(request.form["min_count"])
-        uploaded_file = request.files["file"]
+#Main CGI logic
+print("Content-Type: text/html\n")
 
-        #save the uploaded file
-        input_file = "uploaded_file.fastq"
-        uploaded_file.save(input_file)
+form = cgi.FieldStorage()
 
-        #compile regex patterns
-        start_pattern = re.compile(start_seq)
-        stop_pattern = re.compile(stop_seq)
+#check if the form was submitted
+if "file" in form and "start_seq" in form and "stop_seq" in form and "min_count" in form:
+    #Get user inputs
+    start_seq = form.getvalue("start_seq")
+    stop_seq = form.getvalue("stop_seq")
+    min_count = int(form.getvalue("min_count"))
+    file_item = form["file"]
 
-        unique_proteins = {}
-        total_sequences = 0   #counter for total sequences parsed
-        unique_clones = 0     #counter for unique clones
+    #Save the uploaded file
+    input_file = "uploaded_file.fastq"
+    with open(input_file, "wb") as f:
+        f.write(file_item.file.read())
+        
+    #compile regex patterns
+    start_pattern = re.compile(start_seq)
+    stop_pattern = re.compile(stop_seq)
+
+    unique_proteins = {}
+    total_sequences = 0   #counter for total sequences parsed
+    unique_clones = 0     #counter for unique clones
  
-        #process the FASTQ file
-        for record in SeqIO.parse(input_file, "fastq"):
-            total_sequences +=1 #increment total sequences counter
-            translations = translate_dna(record.seq)
-            for strand, frame, protein in translations:
-                protein_seq = str(protein)
-                trimmed_seq = trim_sequence(protein_seq, start_pattern, stop_pattern)
+    #process the FASTQ file
+    for record in SeqIO.parse(input_file, "fastq"):
+        total_sequences +=1 #increment total sequences counter
+        translations = translate_dna(record.seq)
+        for strand, frame, protein in translations:
+            protein_seq = str(protein)
+            trimmed_seq = trim_sequence(protein_seq, start_pattern, stop_pattern)
                 
-                if trimmed_seq:
-                    if trimmed_seq in unique_proteins:
-                        unique_proteins[trimmed_seq]["count"]+=1
-                    else:
-                        unique_clones += 1 #increment unique clones counter
-                        unique_proteins[trimmed_seq] = {
-                            "count": 1,
-                            "record": SeqRecord(
-                                Seq(trimmed_seq),
-                                id = record.id,
-                                description = f"strand = {strand}, frame = {frame}"
-                            )
-                        }
-        #write output to FASTA file
-        output_file = "output.fasta"
-        total_count = 0
-        with open(output_file, "w") as output_handle:
-            for seq, data in unique_proteins.items():
-                if data["count"] >= min_count:
-                    data["record"].description += f", count = {data['count']}"
-                    SeqIO.write(data["record"], output_handle, "fasta")
-                    total_count += data['count']
+            if trimmed_seq:
+                if trimmed_seq in unique_proteins:
+                    unique_proteins[trimmed_seq]["count"]+=1
+                else:
+                    unique_clones += 1 #increment unique clones counter
+                    unique_proteins[trimmed_seq] = {
+                        "count": 1,
+                        "record": SeqRecord(
+                            Seq(trimmed_seq),
+                            id = record.id,
+                            description = f"strand = {strand}, frame = {frame}"
+                        )
+                    }
+    #write output to FASTA file
+    output_file = "output.fasta"
+    total_count = 0
+    with open(output_file, "w") as output_handle:
+        for seq, data in unique_proteins.items():
+            if data["count"] >= min_count:
+                data["record"].description += f", count = {data['count']}"
+                SeqIO.write(data["record"], output_handle, "fasta")
+                total_count += data['count']
 
         return render_template(
             "results.html",
             total_sequences = total_sequences,
-            unique_clones = unique_clones
-            total_count = total_count
+            unique_clones = unique_clones,
+            total_count = total_count,
             output_file = output_file
         )
     return render_template("index.html")
