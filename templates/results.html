@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+
+<html lang = "en">
+<head>
+	<meta charset = "UTF-8">
+	<meta name = "viewport" content = "width=device-width, initial-scale = 1.0">
+	<title>Results</title>
+</head>
+<body>
+	<h1>Processing Complete</h1>
+	<p>Total sequences parsed: {{total_sequences }}</p>
+	<p>Unique clones found: {{ unique_clones }}</p>
+	<p>Total sequences matching criteria: {{total_count }}</p>
+	<a href = "{{ url_for('download', filename=output_file) }}">Download FASTA File</a>
+</body>
+</html>

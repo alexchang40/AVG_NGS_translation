@@ -1,26 +1,23 @@
 #!/usr/bin/python3
 
+from flask import Flask, render_template, request, send_file
 from Bio import SeqIO
 from Bio.Seq import Seq 
 from Bio.SeqRecord import SeqRecord
 import re
+import os
 
-#start pattern is "MQLL", stop pattern is "VTVSS"
-start_pattern = re.compile("MQLL")
-stop_pattern = re.compile("VTVSS")
+app = Flask(__name__)
 
-#Prompt the user for input and output file names
-input_file = input("Enter the input file to be read: ")
-output_file = input("Enter the name of the output fasta file: ")
 
-#ensure that the DNA is a multiple of 3
+#Function to ensure that the DNA is a multiple of 3
 def trim_to_multiple_of_three(dna_seq):
     remainder = len(dna_seq)%3
     if remainder != 0:
         return dna_seq[:-remainder]
     return dna_seq
 
-#translate DNA to protein in all six reading frames
+#Function to translate DNA to protein in all six reading frames
 def translate_dna(dna_seq):
     #empty list of the translations
     translations = []
@@ -31,7 +28,7 @@ def translate_dna(dna_seq):
             translations.append((strand, frame, protein))
     return translations
 
-#trim the aa sequence 
+#Function to trim the aa sequence based on start and stop patterns
 def trim_sequence(protein_seq, start_pattern, stop_pattern):
     start_match = start_pattern.search(protein_seq)
     stop_match = stop_pattern.search(protein_seq)
@@ -43,48 +40,70 @@ def trim_sequence(protein_seq, start_pattern, stop_pattern):
             return protein_seq[start_index:stop_index]
     return None
 
-unique_proteins = {}
+@app.route("/", methods = ["GET", "POST"])
+def index():
+    if request.method == "POST":
+        #Get user inputs
+        start_seq = request.form["start_seq"]
+        stop_seq = request.form["stop_seq"]
+        min_count = int(request.form["min_count"])
+        uploaded_file = request.files["file"]
 
-#parse through the fastq
-for record in SeqIO.parse(input_file, "fastq"):
-    #debug
-#    print(f"Original sequence: {record.seq}")
-    
-    trimmed_dna = trim_to_multiple_of_three(record.seq)
-    #debug
-#    print(f"Trimmed sequence: {trimmed_dna}, Length: {len(trimmed_dna)}")
-    
-    translations = translate_dna(trimmed_dna)
-    for strand, frame, protein in translations:
-        #debug
-#        print(f"Translated protein (strand = {strand}, frame = {frame}): {protein}")
+        #save the uploaded file
+        input_file = "uploaded_file.fastq"
+        uploaded_file.save(input_file)
 
-        protein_seq = str(protein)
-        trimmed_seq = trim_sequence(protein_seq, start_pattern, stop_pattern)
+        #compile regex patterns
+        start_pattern = re.compile(start_seq)
+        stop_pattern = re.compile(stop_seq)
 
-        if trimmed_seq:
-            if trimmed_seq in unique_proteins:
-                unique_proteins[trimmed_seq]["count"] += 1
-            else:
-                unique_proteins[trimmed_seq] = {
-                    "count": 1,
-                    "record": SeqRecord(
-                        Seq(trimmed_seq),
-                        id = record.id,
-                        description = f"strand = {strand}, frame = {frame}"
-                    )
-                }
+        unique_proteins = {}
+        total_sequences = 0   #counter for total sequences parsed
+        unique_clones = 0     #counter for unique clones
+ 
+        #process the FASTQ file
+        for record in SeqIO.parse(input_file, "fastq"):
+            total_sequences +=1 #increment total sequences counter
+            translations = translate_dna(record.seq)
+            for strand, frame, protein in translations:
+                protein_seq = str(protein)
+                trimmed_seq = trim_sequence(protein_seq, start_pattern, stop_pattern)
+                
+                if trimmed_seq:
+                    if trimmed_seq in unique_proteins:
+                        unique_proteins[trimmed_seq]["count"]+=1
+                    else:
+                        unique_clones += 1 #increment unique clones counter
+                        unique_proteins[trimmed_seq] = {
+                            "count": 1,
+                            "record": SeqRecord(
+                                Seq(trimmed_seq),
+                                id = record.id,
+                                description = f"strand = {strand}, frame = {frame}"
+                            )
+                        }
+        #write output to FASTA file
+        output_file = "output.fasta"
+        total_count = 0
+        with open(output_file, "w") as output_handle:
+            for seq, data in unique_proteins.items():
+                if data["count"] >= min_count:
+                    data["record"].description += f", count = {data['count']}"
+                    SeqIO.write(data["record"], output_handle, "fasta")
+                    total_count += data['count']
 
-totalcount = 0
-#writes to the output file
-with open(output_file, "w") as output_handle:
-    for seq, data in unique_proteins.items():
-        if data["count"]>0: #only write sequences with count >5    
-            data["record"].description += f", count = {data['count']}"
-            SeqIO.write(data["record"], output_handle, "fasta")
-            totalcount += data['count']
+        return render_template(
+            "results.html",
+            total_sequences = total_sequences,
+            unique_clones = unique_clones
+            total_count = total_count
+            output_file = output_file
+        )
+    return render_template("index.html")
 
-print(f"Total count is {totalcount}")
+@app.route("/download<filename>")
+def download(filename):
+    return send_file(filename, as_attachment=True)
 
-
-
+if __name__ == "__main__":
+    app.run(debug=True)
