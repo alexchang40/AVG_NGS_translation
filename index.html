@@ -8,21 +8,18 @@
 </head>
 <body>
 	<h1>AvantGen NGS FASTQ Translation Tool</h1>
-	<form method = "POST" enctype="multipart/form-data" onsubmit="return validateForm()">
-		<label for="file">Upload FASTQ File:</label>
-		<input type="file" name="file" id="file" required><br><br>
+	<form action="/cgi-bin/translate_trim.cgi" method="post" enctype="multipart/form-data">
+        	<label for="input_file">Upload FASTQ File:</label>
+        	<input type="file" name="input_file" id="input_file" required><br><br>
 
-		<label for="start_seq">Start Sequence:</label>
-		<input type="text" name="start_seq" id="start_seq" value="MQLL" required><br><br>
+        	<label for="output_file">Output FASTA File Name:</label>
+       		<input type="text" name="output_file" id="output_file" required><br><br>
 
-		<label for="stop_seq">Stop Sequence:</label>
-	        <input type="text" name="stop_seq" id="stop_seq" value="VTVSS" required><br><br>
+        	<label for="input_count">Count Threshold:</label>
+        	<input type="number" name="input_count" id="input_count" value="1" min="1" required><br><br>
 
-		<label for="start_seq">Minimum Count:</label>
-		<input type="text" name="min_count" id="min_count" value="1" required><br><br>
-
-		<button type="submit">Process File</button>
-	</form>
+        	<input type="submit" value="Submit">
+    </form>
 </body>
 </html>
 
