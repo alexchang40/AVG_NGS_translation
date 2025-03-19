@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+
+<html lang = "en">
+<head>
+	<meta charset = "UTF-8">
+	<meta name = "viewport" content="width=device-width, initial-scale=1.0">
+	<title>AVG NGS Translation</title>
+</head>
+<body>
+	<h1>AvantGen NGS FASTQ Translation Tool</h1>
+	<form action="/cgi-bin/translate_trim.cgi" method="post" enctype="multipart/form-data">
+        	<label for="input_file">Upload FASTQ File:</label>
+        	<input type="file" name="input_file" id="input_file" required><br><br>
+
+        	<label for="output_file">Output FASTA File Name:</label>
+       		<input type="text" name="output_file" id="output_file" required><br><br>
+
+        	<label for="input_count">Count Threshold:</label>
+        	<input type="number" name="input_count" id="input_count" value="1" min="1" required><br><br>
+
+        	<input type="submit" value="Submit">
+    </form>
+</body>
+</html>
+
