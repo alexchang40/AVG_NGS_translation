@@ -56,8 +56,8 @@ output_file = form["output_file"].value
 input_count = int(form["input_count"].value)
 
 # Start and stop patterns
-start_pattern = form["start_pattern"].value.upper()
-stop_pattern = form["stop_pattern"].value.upper()
+start_pattern = re.compile(form["start_pattern"].value.upper())
+stop_pattern = re.compile(form["stop_pattern"].value.upper())
 
 unique_proteins = {}
 total_sequences = 0
