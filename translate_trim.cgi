@@ -47,7 +47,7 @@ print("Content-Type: text/html\n")  # HTTP header
 form = cgi.FieldStorage()
 
 # Get uploaded file and other inputs
-if "input_file" not in form or "output_file" not in form or "input_count" not in form:
+if "input_file" not in form or "output_file" not in form or "input_count" not in form or "start_pattern" not in form or "stop_pattern" not in form:
     print("<h1>Error: Missing form data</h1>")
     exit()
 
@@ -56,11 +56,12 @@ output_file = form["output_file"].value
 input_count = int(form["input_count"].value)
 
 # Start and stop patterns
-start_pattern = re.compile(form["start_pattern"].value.upper())
-stop_pattern = re.compile(form["stop_pattern"].value.upper())
+start_pattern = form["start_pattern"].value.upper()
+stop_pattern = form["stop_pattern"].value.upper()
 
 unique_proteins = {}
 total_sequences = 0
+total_matches = 0
 unique_clones = 0
 
 # Parse the FASTQ file
@@ -74,6 +75,7 @@ for record in SeqIO.parse(input_file, "fastq"):
         trimmed_seq = trim_sequence(protein_seq, start_pattern, stop_pattern)
 
         if trimmed_seq:
+            total_matches+=1    
             if trimmed_seq in unique_proteins:
                 unique_proteins[trimmed_seq]["count"] += 1
             else:
@@ -87,6 +89,15 @@ for record in SeqIO.parse(input_file, "fastq"):
                 }
             break
 
+unique_clones = len(unique_proteins)
+clones_above_threshold = {
+    seq: data for seq, data in unique_proteins.items()
+    if data["count"] >= input_count
+}
+
+num_clones_above_thershold = len(clones_above_threshold)
+total_counts_above_threshold = sum(data["count"] for data in clones_above_threshold.values())
+
 # Write the output FASTA file
 output_path = f"/var/www/html/{output_file}"  # Save output in web-accessible directory
 with open(output_path, "w") as output_handle:
@@ -98,7 +109,14 @@ with open(output_path, "w") as output_handle:
 # Display results
 print("<h1>Translation and Trimming Complete</h1>")
 print(f"<p>Output file: <a href='/{output_file}'>{output_file}</a></p>")
+print"<h2>Results</h2>")
 if input_count == 1:
-    print(f"<p>All counts included in file. The number of sequences screened is {total_sequences}, of which {sum(data['count'] for data in unique_proteins.values())} are within the file, making up {len(unique_proteins)} unique clones.</p>")
+    print("<p>Threshold: all counts</p>")
 else:
-    print(f"<p>Counts {input_count} and higher included in file. The number of sequences screened is {total_sequences}, of which {sum(data['count'] for data in unique_proteins.values())} are within the file, making up {len(unique_proteins)} unique clones.</p>")
+    print("<p>Threshold: {input_count}</p>")
+print(f"""
+<p>Total sequences processed: {total_sequences}</p>
+<p>Total unique clones found: {unique_clones}</p>
+<p>Unique clones above threshold: {num_clones_above_threshold}</p>
+<p>Total count of threshold-passing clones: {total_counts_above_threshold}</p>
+""")
