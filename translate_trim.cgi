@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import io
 import cgi
 import cgitb
 from Bio import SeqIO
@@ -50,7 +51,7 @@ if "input_file" not in form or "output_file" not in form or "input_count" not in
     print("<h1>Error: Missing form data</h1>")
     exit()
 
-input_file = form["input_file"].file
+input_file = io.TextIOWrapper(form["input_file"].file, encoding = 'ascii')
 output_file = form["output_file"].value
 input_count = int(form["input_count"].value)
 
