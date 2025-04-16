@@ -109,7 +109,7 @@ with open(output_path, "w") as output_handle:
 # Display results
 print("<h1>Translation and Trimming Complete</h1>")
 print(f"<p>Output file: <a href='/{output_file}'>{output_file}</a></p>")
-print"<h2>Results</h2>")
+print("<h2>Results</h2>")
 if input_count == 1:
     print("<p>Threshold: all counts</p>")
 else:
