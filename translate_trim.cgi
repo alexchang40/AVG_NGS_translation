@@ -95,7 +95,7 @@ clones_above_threshold = {
     if data["count"] >= input_count
 }
 
-num_clones_above_thershold = len(clones_above_threshold)
+num_clones_above_threshold = len(clones_above_threshold)
 total_counts_above_threshold = sum(data["count"] for data in clones_above_threshold.values())
 
 # Write the output FASTA file
