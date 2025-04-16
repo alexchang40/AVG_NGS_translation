@@ -10,10 +10,6 @@ import re
 # Enable CGI error reporting
 cgitb.enable()
 
-# Start and stop patterns
-start_pattern = re.compile("MQLL")
-stop_pattern = re.compile("VTVSS")
-
 # Function to trim DNA to a multiple of 3
 def trim_to_multiple_of_three(dna_seq):
     remainder = len(dna_seq) % 3
@@ -57,6 +53,10 @@ if "input_file" not in form or "output_file" not in form or "input_count" not in
 input_file = form["input_file"].file
 output_file = form["output_file"].value
 input_count = int(form["input_count"].value)
+
+# Start and stop patterns
+start_pattern = re.compile(form["start_pattern"].value)
+stop_pattern = re.compile(form["stop_pattern"].value)
 
 unique_proteins = {}
 total_sequences = 0
